@@ -289,6 +289,33 @@ const saveData = async () => {
 };
 
 /* ===== ADD/EDIT/DELETE ===== */
+
+function loadEditingData() {
+    const editingItem = localStorage.getItem("editingItem");
+    const editingType = localStorage.getItem("editingType");
+    const editingIndex = localStorage.getItem("editingIndex");
+    
+    if(editingItem && editingType !== null && editingIndex !== null) {
+        const item = JSON.parse(editingItem);
+        const titleEl = document.getElementById("title");
+        const imageEl = document.getElementById("image");
+        const ratingEl = document.getElementById("rating");
+        const dateEl = document.getElementById("date");
+        const commentEl = document.getElementById("comment");
+        
+        if(titleEl) titleEl.value = item.title;
+        if(imageEl) imageEl.value = item.image;
+        if(ratingEl) ratingEl.value = item.rating;
+        if(dateEl) dateEl.value = item.date;
+        if(commentEl) commentEl.value = item.comment;
+        
+        // Sauvegarder les infos d'édition dans les variables globales
+        window.editingType = editingType;
+        window.editingIndex = parseInt(editingIndex);
+        editIndex = parseInt(editingIndex);
+    }
+}
+
 async function saveItem() {
     const titleEl = document.getElementById("title");
     const imageEl = document.getElementById("image");
@@ -301,7 +328,7 @@ async function saveItem() {
     const item = {
         title: titleEl.value,
         image: imageEl ? imageEl.value || "https://via.placeholder.com/400x600" : "https://via.placeholder.com/400x600",
-        rating: ratingEl ? +ratingEl.value : 1,
+        rating: ratingEl ? parseFloat(ratingEl.value) || 1 : 1,
         date: dateEl ? dateEl.value : "",
         comment: commentEl ? commentEl.value : ""
     };
@@ -309,6 +336,8 @@ async function saveItem() {
     // Déterminer le type à utiliser (edit type ou current type)
     const typeToUse = window.editingType || currentType;
     const currentList = typeToUse === "animes" ? animes : typeToUse === "films" ? films : series;
+    
+    const isNewItem = editIndex === null;
     
     if(editIndex === null) {
         currentList.push(item);
@@ -328,15 +357,19 @@ async function saveItem() {
 
     await saveData();
     render();
+    
+    // Nettoyer les données d'édition du localStorage
+    localStorage.removeItem("editingType");
+    localStorage.removeItem("editingIndex");
+    localStorage.removeItem("editingItem");
+    
+    // Redirection vers la bibliothèque seulement pour un nouvel ajout
+    if(isNewItem) {
+        window.location.href = "list.html";
+    }
 }
 
 function editItem(i, typeParam = null) {
-    const titleEl = document.getElementById("title");
-    const imageEl = document.getElementById("image");
-    const ratingEl = document.getElementById("rating");
-    const dateEl = document.getElementById("date");
-    const commentEl = document.getElementById("comment");
-    
     // Déterminer le type à utiliser
     const type = typeParam || currentType;
     const currentList = type === "animes" ? animes : type === "films" ? films : series;
@@ -344,16 +377,13 @@ function editItem(i, typeParam = null) {
     
     if(!item) return;
     
-    if(titleEl) titleEl.value = item.title;
-    if(imageEl) imageEl.value = item.image;
-    if(ratingEl) ratingEl.value = item.rating;
-    if(dateEl) dateEl.value = item.date;
-    if(commentEl) commentEl.value = item.comment;
+    // Sauvegarder les données d'édition dans localStorage
+    localStorage.setItem("editingType", type);
+    localStorage.setItem("editingIndex", i);
+    localStorage.setItem("editingItem", JSON.stringify(item));
     
-    // Sauvegarder le type et l'index pour la sauvegarde
-    window.editingType = type;
-    window.editingIndex = i;
-    editIndex = i;
+    // Naviguer vers la page d'ajout pour éditer
+    window.location.href = "add.html";
 }
 
 async function deleteItem(i, typeParam = null) {
@@ -449,6 +479,10 @@ function updateStats() {
     const statFilms = document.getElementById("statFilms");
     const statSeries = document.getElementById("statSeries");
     const statWatch = document.getElementById("statWatch");
+    const statGrandTotal = document.getElementById("statGrandTotal");
+    const statAvgRating = document.getElementById("statAvgRating");
+    const statBestRating = document.getElementById("statBestRating");
+    const statWithComments = document.getElementById("statWithComments");
     
     if(!statTotal) return;
     
@@ -456,6 +490,33 @@ function updateStats() {
     if(statFilms) statFilms.textContent = films.length;
     if(statSeries) statSeries.textContent = series.length;
     if(statWatch) statWatch.textContent = watch.length;
+    
+    // Nouvelles stats
+    const allItems = [...animes, ...films, ...series];
+    
+    if(statGrandTotal) statGrandTotal.textContent = allItems.length;
+    
+    // Note moyenne
+    if(statAvgRating && allItems.length > 0) {
+        const avgRating = (allItems.reduce((acc, item) => acc + item.rating, 0) / allItems.length).toFixed(1);
+        statAvgRating.textContent = avgRating + "⭐";
+    } else if(statAvgRating) {
+        statAvgRating.textContent = "0⭐";
+    }
+    
+    // Meilleure note
+    if(statBestRating && allItems.length > 0) {
+        const bestRating = Math.max(...allItems.map(item => item.rating));
+        statBestRating.textContent = bestRating + "⭐";
+    } else if(statBestRating) {
+        statBestRating.textContent = "0⭐";
+    }
+    
+    // Nombre d'items avec avis
+    if(statWithComments) {
+        const withComments = allItems.filter(item => item.comment && item.comment.trim().length > 0).length;
+        statWithComments.textContent = withComments;
+    }
 }
 
 /* ===== RENDER ===== */
@@ -556,6 +617,13 @@ setTimeout(() => {
         render();
     }
     window.updateAuthIcon();
+    
+    // Initialiser le type actif si on est sur add.html
+    const typeButtons = document.querySelectorAll(".type-tabs .tab-btn");
+    if(typeButtons.length > 0) {
+        // On est sur add.html - initialiser le premier type (animé)
+        window.switchType("animes");
+    }
     
     // Charger les filtres depuis les éléments si présents
     const filterTypeEl = document.getElementById("filterType");

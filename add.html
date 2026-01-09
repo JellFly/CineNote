@@ -46,13 +46,7 @@
 
     <div class="form-group">
         <label for="rating">Note</label>
-        <select id="rating">
-            <option value="1">⭐</option>
-            <option value="2">⭐⭐</option>
-            <option value="3">⭐⭐⭐</option>
-            <option value="4">⭐⭐⭐⭐</option>
-            <option value="5">⭐⭐⭐⭐⭐</option>
-        </select>
+        <input type="number" id="rating" min="0" max="5" step="0.5" placeholder="0 à 5" value="3">
     </div>
 
     <div class="form-group">
@@ -70,6 +64,10 @@
 </main>
 
 <script src="site.js"></script>
+<script>
+    // Charger les données d'édition si présentes
+    window.addEventListener('DOMContentLoaded', loadEditingData);
+</script>
 
 </body>
 </html>
