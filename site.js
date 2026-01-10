@@ -11,6 +11,10 @@ let series = [];
 let watch = [];
 let editIndex = null;
 
+/* ===== TMDB CONFIG ===== */
+const TMDB_API_KEY = "48bc790848498e462ccf3656b0656733";
+const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+
 /* ===== FIREBASE LOADING ===== */
 window.loadProfilesFromFirebase = async function() {
     if(!window.auth || !window.auth.currentUser) {
@@ -605,6 +609,119 @@ function render() {
 
     updateStats();
 }
+
+/* ===== TMDB SEARCH ===== */
+window.searchTMDB = async function() {
+    const query = document.getElementById("searchQuery").value;
+    const searchType = document.getElementById("searchType").value;
+    const loadingEl = document.getElementById("loadingSpinner");
+    const resultsEl = document.getElementById("searchResults");
+    const noResultsEl = document.getElementById("noResults");
+    
+    if(!query) return alert("Veuillez entrer une recherche");
+    
+    loadingEl.style.display = "block";
+    resultsEl.innerHTML = "";
+    noResultsEl.style.display = "none";
+    
+    try {
+        let allResults = [];
+        
+        // Rechercher films
+        if(searchType === "all" || searchType === "movie") {
+            const movieRes = await fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR`);
+            const movieData = await movieRes.json();
+            if(movieData.results) {
+                allResults.push(...movieData.results.map(m => ({...m, tmdb_type: "movie"})));
+            }
+        }
+        
+        // Rechercher séries
+        if(searchType === "all" || searchType === "tv") {
+            const tvRes = await fetch(`${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR`);
+            const tvData = await tvRes.json();
+            if(tvData.results) {
+                allResults.push(...tvData.results.map(t => ({...t, tmdb_type: "tv"})));
+            }
+        }
+        
+        // Rechercher animés (dans TV avec keyword anime)
+        if(searchType === "all" || searchType === "anime") {
+            const animeRes = await fetch(`${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR&with_genres=16`);
+            const animeData = await animeRes.json();
+            if(animeData.results) {
+                allResults.push(...animeData.results.map(a => ({...a, tmdb_type: "anime"})));
+            }
+        }
+        
+        loadingEl.style.display = "none";
+        
+        if(allResults.length === 0) {
+            noResultsEl.style.display = "block";
+            return;
+        }
+        
+        // Afficher les résultats
+        resultsEl.innerHTML = `<div class="grid">` + allResults.map((item, idx) => {
+            const isMovie = item.tmdb_type === "movie";
+            const title = isMovie ? item.title : item.name;
+            const date = isMovie ? item.release_date : item.first_air_date;
+            const year = date ? date.split("-")[0] : "?";
+            const poster = item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : "https://via.placeholder.com/300x450";
+            const rating = item.vote_average ? (item.vote_average / 2).toFixed(1) : "0";
+            const typeIcon = item.tmdb_type === "movie" ? "🎬" : item.tmdb_type === "anime" ? "🎌" : "📺";
+            const typeLabel = item.tmdb_type === "movie" ? "Film" : item.tmdb_type === "anime" ? "Animé" : "Série";
+            
+            return `
+            <div class="card">
+                <img src="${poster}" alt="${title}" style="width: 100%; height: 300px; object-fit: cover;">
+                <div class="card-content">
+                    <div class="card-type">${typeIcon} ${typeLabel}</div>
+                    <div class="card-title">${title}</div>
+                    <div class="card-meta">📅 ${year}</div>
+                    <div class="card-rating">${stars(Math.round(rating))}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Note: ${(rating * 2).toFixed(1)}/10</div>
+                    <div class="card-comment" style="max-height: 60px; overflow: hidden;">${item.overview ? item.overview : "Pas de description disponible"}</div>
+                    <div class="card-actions" style="margin-top: 12px;">
+                        <button class="btn-small" onclick="window.addFromTMDB(${idx}, '${item.tmdb_type}', '${title.replace(/'/g, "\\'")}', '${poster.replace(/'/g, "\\'")}')" style="flex: 1;">➕ Ajouter</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join("") + `</div>`;
+        
+    } catch(e) {
+        console.error("Erreur recherche TMDB:", e);
+        loadingEl.style.display = "none";
+        resultsEl.innerHTML = `<p style="color: red;">Erreur lors de la recherche: ${e.message}</p>`;
+    }
+};
+
+window.addFromTMDB = function(idx, tmdbType, title, poster) {
+    // Déterminer le type CineNote
+    const typeMap = {
+        "movie": "films",
+        "tv": "series",
+        "anime": "animes"
+    };
+    const cinetype = typeMap[tmdbType];
+    
+    // Créer l'item
+    const item = {
+        title: title,
+        image: poster,
+        rating: 3,
+        date: new Date().toISOString().split("T")[0],
+        comment: ""
+    };
+    
+    // Sauvegarder dans localStorage
+    localStorage.setItem("editingItem", JSON.stringify(item));
+    localStorage.setItem("editingType", cinetype);
+    localStorage.setItem("editingIndex", "");
+    
+    // Rediriger vers add.html
+    window.location.href = "add.html";
+};
 
 /* ===== INITIALISATION ===== */
 setTimeout(() => {

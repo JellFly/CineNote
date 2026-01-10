@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Tracker - Recherche TMDB</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>🎬 Anime Tracker</h1>
+    </div>
+    <nav>
+        <a href="index.html">Accueil</a>
+        <a href="add.html">Ajouter</a>
+        <a href="search.html">🔍 Recherche</a>
+        <a href="list.html">Ma Bibliothèque</a>
+        <a href="watchlist.html">⏳ Watchlist</a>
+        <a href="about.html">À propos</a>
+    </nav>
+    <div class="header-right">
+        <div class="auth-icon" onclick="window.toggleAuthOrProfile()" id="authIcon">👤</div>
+    </div>
+</header>
+
+<main>
+<section>
+    <h2>🔍 Recherche TMDB</h2>
+    <p style="color: var(--text-muted); margin-bottom: 24px;">Recherchez des films, séries et animés</p>
+    
+    <div style="background: var(--bg-lighter); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: flex-end;">
+            <div>
+                <label for="searchQuery" style="display: block; margin-bottom: 8px; font-weight: 500;">Rechercher</label>
+                <input id="searchQuery" type="text" placeholder="Titre du film, série ou animé..." style="margin-bottom: 0;">
+            </div>
+            <div>
+                <label for="searchType" style="display: block; margin-bottom: 8px; font-weight: 500;">Type</label>
+                <select id="searchType" style="margin-bottom: 0;">
+                    <option value="all">Tous les types</option>
+                    <option value="movie">🎬 Films</option>
+                    <option value="tv">📺 Séries</option>
+                    <option value="anime">🎌 Animés</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="window.searchTMDB()" style="width: 100%; margin-bottom: 0;">Rechercher</button>
+        </div>
+    </div>
+
+    <!-- Loading spinner -->
+    <div id="loadingSpinner" style="display: none; text-align: center; padding: 40px; color: var(--text-muted);">
+        <div style="font-size: 32px; margin-bottom: 12px;">⏳</div>
+        <p>Recherche en cours...</p>
+    </div>
+
+    <!-- Results -->
+    <div id="searchResults"></div>
+
+    <!-- No results message -->
+    <div id="noResults" style="display: none; text-align: center; color: var(--text-muted); padding: 40px 20px;">
+        <p style="font-size: 18px;">😕 Aucun résultat trouvé</p>
+        <p>Essayez une autre recherche</p>
+    </div>
+</section>
+</main>
+
+<script src="site.js"></script>
+<script>
+    // Event listener pour Enter key
+    document.getElementById("searchQuery").addEventListener("keypress", function(e) {
+        if(e.key === "Enter") window.searchTMDB();
+    });
+</script>
+
+</body>
+</html>
